@@ -9,8 +9,11 @@ local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 -- Continuous focus state tracker
 local currentHoveredItemName = nil
 
--- GLOBAL ANTI-SPAM CLOCK
-local globalAudioCooldown = 0
+-- PER-SOUND ANTI-SPAM CLOCK
+local audioCooldowns = {}
+
+-- -- GLOBAL ANTI-SPAM CLOCK
+-- local globalAudioCooldown = 0
 
 -- 1. SILENT TOOLTIP SCANNER
 GameTooltip:HookScript("OnUpdate", function(self)
@@ -67,7 +70,7 @@ WorldFrame:HookScript("OnMouseUp", function(_, button)
                     end
                 end
                 
-            -- STATE B: PASSIVE AUDIO PLAYBACK MODE (Cooldown Gated)
+            -- STATE B: PASSIVE AUDIO PLAYBACK MODE (Per-Sound Cooldown Gated)
             else
                 if currentHoveredItemName and activeDatabase[currentHoveredItemName] then
                     local savedSoundName = activeDatabase[currentHoveredItemName]
@@ -75,17 +78,26 @@ WorldFrame:HookScript("OnMouseUp", function(_, button)
                     if savedSoundName ~= "" then
                         local currentTime = GetTime()
                         
-                        -- SPAM PROTECTION INTERCEPTOR
-                        if currentTime > globalAudioCooldown then
+                        -- Get this specific item's cooldown expiration time.
+                        -- If it has never played before, default to 0.
+                        local cooldownExpiration = audioCooldowns[currentHoveredItemName] or 0
+                        
+                        -- Only block this specific item's sound.
+                        if currentTime >= cooldownExpiration then
                             local soundPath = LSM and LSM:Fetch("sound", savedSoundName)
                             
                             if soundPath then
                                 PlaySoundFile(soundPath, "Master")
                             else
-                                PlaySoundFile("Interface\\AddOns\\SharedMedia_MyMedia\\sound\\" .. savedSoundName .. ".ogg", "Master")
+                                PlaySoundFile(
+                                    "Interface\\AddOns\\SharedMedia_MyMedia\\sound\\" ..
+                                    savedSoundName .. ".ogg",
+                                    "Master"
+                                )
                             end
                             
-                            globalAudioCooldown = currentTime + 0.1
+                            -- Start a separate 2.5-second cooldown for this item.
+                            audioCooldowns[currentHoveredItemName] = currentTime + 2.5
                         end
                     end
                 end
