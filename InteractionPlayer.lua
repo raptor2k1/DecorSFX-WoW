@@ -12,22 +12,42 @@ local currentHoveredItemName = nil
 -- PER-SOUND ANTI-SPAM CLOCK
 local audioCooldowns = {}
 
--- -- GLOBAL ANTI-SPAM CLOCK
--- local globalAudioCooldown = 0
+-- 1. SAFE TOOLTIP SCANNER
+local lastTooltipText = nil
 
--- 1. SILENT TOOLTIP SCANNER
-GameTooltip:HookScript("OnUpdate", function(self)
+local function UpdateHoveredItem()
     local tooltipTextFrame = _G["GameTooltipTextLeft1"]
-    if tooltipTextFrame then
-        local itemName = tooltipTextFrame:GetText()
-        if itemName and itemName ~= "" then
-            currentHoveredItemName = itemName
-        else
-            currentHoveredItemName = nil
-        end
+
+    if not tooltipTextFrame then
+        currentHoveredItemName = nil
+        return
+    end
+
+    local success, itemName = pcall(function()
+        return tooltipTextFrame:GetText()
+    end)
+
+    if not success or not itemName then
+        currentHoveredItemName = nil
+        return
+    end
+
+    -- Secret strings can pass type() but cannot be inspected.
+    -- Attempt to make a safe copy/validation.
+    local safe, length = pcall(function()
+        return string.len(itemName)
+    end)
+
+    if safe and length > 0 then
+        currentHoveredItemName = itemName
     else
         currentHoveredItemName = nil
     end
+end
+
+
+GameTooltip:HookScript("OnUpdate", function(self)
+    UpdateHoveredItem()
 end)
 
 GameTooltip:HookScript("OnHide", function()
@@ -72,7 +92,7 @@ WorldFrame:HookScript("OnMouseUp", function(_, button)
                 
             -- STATE B: PASSIVE AUDIO PLAYBACK MODE (Per-Sound Cooldown Gated)
             else
-                if currentHoveredItemName and activeDatabase[currentHoveredItemName] then
+                if type(currentHoveredItemName) == "string" and activeDatabase[currentHoveredItemName] then
                     local savedSoundName = activeDatabase[currentHoveredItemName]
                     
                     if savedSoundName ~= "" then
