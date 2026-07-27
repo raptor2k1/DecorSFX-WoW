@@ -1,0 +1,95 @@
+-- THE HANDSHAKE FIX: Guarantee the global namespace exists in memory before using it
+if not DecorSFXAddon then
+    DecorSFXAddon = {}
+end
+
+-- Fetch LibSharedMedia safely from the addon registry
+local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+
+-- Continuous focus state tracker
+local currentHoveredItemName = nil
+
+-- GLOBAL ANTI-SPAM CLOCK
+local globalAudioCooldown = 0
+
+-- 1. SILENT TOOLTIP SCANNER
+GameTooltip:HookScript("OnUpdate", function(self)
+    local tooltipTextFrame = _G["GameTooltipTextLeft1"]
+    if tooltipTextFrame then
+        local itemName = tooltipTextFrame:GetText()
+        if itemName and itemName ~= "" then
+            currentHoveredItemName = itemName
+        else
+            currentHoveredItemName = nil
+        end
+    else
+        currentHoveredItemName = nil
+    end
+end)
+
+GameTooltip:HookScript("OnHide", function()
+    currentHoveredItemName = nil
+end)
+
+-- 2. DYNAMIC ONE-CLICK CAPTURE ENGINE WITH COOLDOWN GATEKEEPING
+local clickStartTime = 0
+WorldFrame:HookScript("OnMouseDown", function(_, button)
+    if button == "RightButton" then
+        clickStartTime = GetTime()
+    end
+end)
+
+WorldFrame:HookScript("OnMouseUp", function(_, button)
+    if button == "RightButton" then
+        local holdDuration = GetTime() - clickStartTime
+        
+        -- Use your calibrated 0.15s interaction threshold
+        if holdDuration <= 0.15 then
+            local activeDatabase = _G["DecorSFXDB"] or {}
+            
+            -- STATE A: CAPTURE MODE ACTIVATED
+            if DecorSFXAddon.isCapturing then
+                if currentHoveredItemName then
+                    if not activeDatabase[currentHoveredItemName] then
+                        activeDatabase[currentHoveredItemName] = "" 
+                    end
+                    
+                    print("|cFF00FF00[Decor SFX]|r Successfully captured new target: |cFF00FFFF" .. currentHoveredItemName .. "|r")
+                    PlaySound(840, "Master") 
+                    
+                    -- THE SECURE HOOK: Save the name safely into our verified global tracker slot
+                    DecorSFXAddon.lastCapturedItem = currentHoveredItemName
+                    
+                    DecorSFXAddon.isCapturing = false
+                    
+                    if DecorSFXAddon.UI and DecorSFXAddon.UI.UpdateList then
+                        DecorSFXAddon.UI.UpdateList()
+                    end
+                end
+                
+            -- STATE B: PASSIVE AUDIO PLAYBACK MODE (Cooldown Gated)
+            else
+                if currentHoveredItemName and activeDatabase[currentHoveredItemName] then
+                    local savedSoundName = activeDatabase[currentHoveredItemName]
+                    
+                    if savedSoundName ~= "" then
+                        local currentTime = GetTime()
+                        
+                        -- SPAM PROTECTION INTERCEPTOR
+                        if currentTime > globalAudioCooldown then
+                            local soundPath = LSM and LSM:Fetch("sound", savedSoundName)
+                            
+                            if soundPath then
+                                PlaySoundFile(soundPath, "Master")
+                            else
+                                PlaySoundFile("Interface\\AddOns\\SharedMedia_MyMedia\\sound\\" .. savedSoundName .. ".ogg", "Master")
+                            end
+                            
+                            globalAudioCooldown = currentTime + 0.1
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)

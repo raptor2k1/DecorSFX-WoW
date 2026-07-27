@@ -1,0 +1,16 @@
+## Interface: 120007
+## Title: Decor SFX
+## Notes: Play custom audio registered via SharedMedia on right-clicks of identifiable objects.
+## Author: Turrin
+## SavedVariables: DecorSFXDB
+## OptionalDeps: LibSharedMedia-3.0, SharedMedia
+## Category: Audio
+## AddonCompartmentFunc: DecorSFX_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: DecorSFX_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: DecorSFX_OnCompartmentLeave
+## IconTexture: Interface\Icons\INV_Misc_Gear_01
+## X-Curse-Project-ID: 999999
+
+DatabaseManager.lua
+InteractionPlayer.lua
+ConfigWindow.lua
