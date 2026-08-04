@@ -1,8 +1,8 @@
 # DecorSFX
 
-**DecorSFX** is a lightweight "just-because-it's-fun" addon designed to spice up the soundscape of World of Warcraft player housing. Because of how it is built, it also works with any identifiable, interactive world-prop objects outside of housing (such as NPCs or mailboxes). It allows you to assign custom, immersive (or silly) sound effects to these world objects using your personal audio files. Google Gemini prompt-based engineering was heavily used to rapidly prototype this addon. This started as a personal weekend project to make a way to play a couple, specific hard-coded sound effects and grew into something more scalable that I thought other folks might get some use out of too. 
+**DecorSFX** is a lightweight "just-because-it's-fun" addon designed to spice up the soundscape of World of Warcraft player housing. Because of how it is built, it also works with any identifiable, interactive world-prop objects outside of housing (such as NPCs or mailboxes). It allows you to assign custom, immersive (or silly) sound effects to these world objects using your personal audio files. Google Gemini (and ChatGPT during editing/review) prompt-based engineering was heavily used to rapidly develop this addon. This started as a personal weekend project to make a way to play a couple, specific hard-coded sound effects and grew into something more scalable that I thought other folks might get some use out of too. 
 
-### 🚀 Key Features
+### Key Features
 * **One-Click Item Capture:** Click "Add New Object" and right-click any interactive prop to instantly add it to your soundboard directory list.
 * **Simple UI Layout:** Type `/dsfx`, `/decorsfx`, or click the native Add-On Compartment icon near your minimap to toggle the management dashboard.
 * **Easy Editing:** Left-click any tracked item row to open a scrollable, alphabetically sorted selector panel. Your most recent addition in the current session will be highlighted in green for easy tracking.
