@@ -1,7 +1,7 @@
 ## Interface: 120007
-## Title: Decor SFX
+## Title: DecorSFX
 ## Notes: Play custom audio registered via SharedMedia on right-clicks of identifiable objects.
-## Author: Turrin
+## Author: Raptor2k1
 ## SavedVariables: DecorSFXDB
 ## OptionalDeps: LibSharedMedia-3.0, SharedMedia
 ## Category: Audio
