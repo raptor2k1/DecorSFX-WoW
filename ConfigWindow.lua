@@ -1,15 +1,23 @@
+-- Code largely generated via prompt engineering using a combination of Google Gemini and ChatGPT.
+-- Generated Code and comments reviewed, debugged, and edited by Raptor2k1.
+-- Last update: 8/4/2026
+-- Description: Handles the configuration and SFX assignment UI for DecorSFX.
+
 -- Fetch LibSharedMedia safely to handle our audio selection choices
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 
--- Create the Global Namespace reference for our windows
+-- Create Global Namespace reference for UI windows
 DecorSFXAddon.UI = {}
 
+-- Initiate References to the main UI windows plus a cache of all available SharedMedia sound names.
 local mainFrame = nil
 local selectionPanel = nil
 local mainScrollChild = nil 
 local cachedSharedMediaSounds = {}
 
--- 1. PRE-CACHE UTILITY: Index all available files right at startup
+----------------------------------------------------------------------------------------------------
+-- Build a cached list of every registered SharedMedia sound.
+----------------------------------------------------------------------------------------------------
 local function LoadSharedMediaCache()
     cachedSharedMediaSounds = {}
     local availableSounds = LSM and LSM:List("sound") or {}
@@ -19,24 +27,28 @@ local function LoadSharedMediaCache()
     table.sort(cachedSharedMediaSounds)
 end
 
--- 2. OPEN THE SELECTION WINDOW (With Integrated Real-Time Input Filtering)
+----------------------------------------------------------------------------------------------------
+-- Open SFX Selection Panel (with integrated live input filtering for SFX file name search)
+----------------------------------------------------------------------------------------------------
 local function RefreshSelectionDrawer(itemName, filterText)
     if not selectionPanel then return end
     
     selectionPanel.scrollChild:Hide()
     
-    -- Wipe any previous sound buttons before mapping new listings
+    -- Clear any previous sound buttons/lines from the SFX selection panel
     for _, child in ipairs({selectionPanel.scrollChild:GetChildren()}) do
         child:Hide()
         child:SetParent(nil)
     end
     
+    -- Initiate variable to track how many entries passed the filter (for position/sizing of scroll area).
     local visibleCount = 0
-    -- Compile your alphabetized file list into a custom native scroll lane
+
+    -- Create one button/line for each sound that matches the current search filter.
     for i = 1, #cachedSharedMediaSounds do
         local soundKey = cachedSharedMediaSounds[i]
         
-        -- DYNAMIC STRING PATTERN CHECK
+        -- Apply a case-insensitive substring search when a filter is entered.
         local matchesFilter = true
         if filterText and filterText ~= "" then
             if not string.find(string.lower(soundKey), string.lower(filterText), 1, true) then
@@ -44,6 +56,7 @@ local function RefreshSelectionDrawer(itemName, filterText)
             end
         end
         
+        -- Populate the SFX selection panel with each match
         if matchesFilter then
             visibleCount = visibleCount + 1
             
@@ -68,8 +81,7 @@ local function RefreshSelectionDrawer(itemName, filterText)
                 local activeDatabase = _G["DecorSFXDB"] or {}
                 activeDatabase[itemName] = soundKey
                 
-                -- THE CRITICAL REPAIR: Clip the string text on selection entry INSTANTLY!
-                -- This ensures that long file names drop their overlaps the millisecond they are clicked.
+                -- Truncate long sound names to avoid overlapping text issues.
                 if selectionPanel.soundTextTarget then
                     local finalDisplayName = soundKey
                     if string.len(finalDisplayName) > 22 then
@@ -78,6 +90,8 @@ local function RefreshSelectionDrawer(itemName, filterText)
                     selectionPanel.soundTextTarget:SetText(finalDisplayName)
                 end
                 
+                -- Play selected SFX (to confirm audio is what was expected)
+                -- Prefer the registered SharedMedia path, with a direct addon path as a fallback.
                 local soundPath = LSM and LSM:Fetch("sound", soundKey)
                 if soundPath then
                     PlaySoundFile(soundPath, "Master")
@@ -85,6 +99,7 @@ local function RefreshSelectionDrawer(itemName, filterText)
                     PlaySoundFile("Interface\\AddOns\\SharedMedia_MyMedia\\sound\\" .. soundKey .. ".ogg", "Master")
                 end
                 
+                -- Print the assignment update to the console
                 print("|cFF00FF00[Decor SFX]|r Updated |cFF00FFFF" .. itemName .. "|r -> |cFFFFD100" .. soundKey .. "|r")
                 selectionPanel:Hide()
             end)
@@ -98,7 +113,7 @@ local function RefreshSelectionDrawer(itemName, filterText)
     selectionPanel.scrollChild:Show()
 end
 
--- Expose the refresh tool globally to match our search box script hook
+-- Make the refresh function available so the search box can rebuild the list as text changes.
 DecorSFXAddon.UI.RefreshSelectionDrawer = RefreshSelectionDrawer
 
 local function OpenAudioSelectionPanel(itemName, soundTextComponent)
@@ -118,7 +133,9 @@ local function OpenAudioSelectionPanel(itemName, soundTextComponent)
     selectionPanel:Show()
 end
 
--- 3. UTILITY: REBUILD MAIN WINDOW ITEM DIRECTORY LIST
+----------------------------------------------------------------------------------------------------
+-- Rebuild list of tracked objects for main window
+----------------------------------------------------------------------------------------------------
 local function DrawActiveDatabaseRows()
     if not mainFrame or not mainScrollChild then return end
     
@@ -129,6 +146,7 @@ local function DrawActiveDatabaseRows()
 
     local activeDatabase = _G["DecorSFXDB"] or {}
     
+    -- Copy the database keys into a sortable list so objects are always displayed alphabetically.
     local sortedItemNames = {}
     for itemName in pairs(activeDatabase) do
         table.insert(sortedItemNames, itemName)
@@ -141,6 +159,7 @@ local function DrawActiveDatabaseRows()
         local itemName = sortedItemNames[index]
         local soundName = activeDatabase[itemName]
         
+        -- Create one clickable row for each tracked object.
         local row = CreateFrame("Button", nil, mainScrollChild, "BackdropTemplate")
         row:SetSize(315, 32)
         row:SetPoint("TOPLEFT", mainScrollChild, "TOPLEFT", 5, -(rowCount - 1) * 36)
@@ -149,6 +168,7 @@ local function DrawActiveDatabaseRows()
             tile = true, tileSize = 16, edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 }
         })
         
+        -- Highlight the most recently captured object in green so that it's easy to find.
         if DecorSFXAddon.lastCapturedItem == itemName then
             row:SetBackdropColor(0.1, 0.25, 0.1, 0.95)   
             row:SetBackdropBorderColor(0.2, 1.0, 0.2, 1) 
@@ -157,6 +177,7 @@ local function DrawActiveDatabaseRows()
             row:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
         end
 
+        -- Truncate long object names to avoid text overlap/overflow
         local finalItemName = itemName
         if string.len(finalItemName) > 24 then
             finalItemName = string.sub(finalItemName, 1, 21) .. "..."
@@ -187,8 +208,11 @@ local function DrawActiveDatabaseRows()
         highlight:SetAllPoints(row)
         row:SetHighlightTexture(highlight)
 
+        -- Left-click to assign a sound, right-click to open mute/delete options menu.
         row:RegisterForClicks("RightButtonUp", "LeftButtonUp")
         row:SetScript("OnClick", function(_, button)
+
+            -- Left click to open the SFX-assignment panel
             if button == "LeftButton" then
                 if DecorSFXAddon.lastCapturedItem == itemName then
                     DecorSFXAddon.lastCapturedItem = nil
@@ -197,7 +221,8 @@ local function DrawActiveDatabaseRows()
                 end
                 if selectionPanel:IsShown() then selectionPanel:Hide() end
                 OpenAudioSelectionPanel(itemName, soundText)
-                
+            
+            -- Right-click actions menu for clearing or removing this object.
             elseif button == "RightButton" then
                 MenuUtil.CreateContextMenu(row, function(owner, rootDescription)
                     rootDescription:CreateTitle("Manage: " .. itemName)
@@ -210,6 +235,7 @@ local function DrawActiveDatabaseRows()
                     rootDescription:CreateButton("|cFFFF3333Delete This Object|r", function()
                         if DecorSFXAddon.lastCapturedItem == itemName then DecorSFXAddon.lastCapturedItem = nil end
                         
+                        -- Close the selection panel if the object currently being edited is deleted.
                         if selectionPanel and selectionPanel:IsShown() and selectionPanel.TitleText then
                             local currentDrawerTitle = selectionPanel.TitleText:GetText() or ""
                             if string.find(currentDrawerTitle, itemName, 1, true) then
@@ -233,16 +259,18 @@ local function DrawActiveDatabaseRows()
     mainFrame.scrollBar:SetValue(1)
 end
 
--- Expose public layout update command hooks
+-- Helper used by other modules to refresh the main list when data changes.
 DecorSFXAddon.UI.UpdateList = function()
     if mainFrame and mainFrame:IsShown() then DrawActiveDatabaseRows() end
 end
 
-
--- 4. INITIALIZE THE CONTAINER WINDOWS EARLY IN BACKGROUND MEMORY
+----------------------------------------------------------------------------------------------------
+-- Build UI Windows
+----------------------------------------------------------------------------------------------------
 local function BuildUIWindow()
     if mainFrame then return end
 
+    -- Main Window Setup
     mainFrame = CreateFrame("Frame", "DecorSFXMainWindow", UIParent, "BackdropTemplate")
     mainFrame:SetSize(380, 450)
     mainFrame:SetPoint("CENTER")
@@ -261,17 +289,19 @@ local function BuildUIWindow()
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     })
 
+    -- Main Window Labels
     mainFrame.TitleText = mainFrame:CreateFontString(nil, "OVERLAY")
     mainFrame.TitleText:SetFontObject("GameFontNormalLarge")
     mainFrame.TitleText:SetPoint("TOP", mainFrame, "TOP", 0, -16)
     mainFrame.TitleText:SetText("Decor SFX Home Directory")
     
+    -- Main Window Controls
     mainFrame.SubtitleText = mainFrame:CreateFontString(nil, "OVERLAY")
     mainFrame.SubtitleText:SetFontObject("GameFontDisableSmall")
     mainFrame.SubtitleText:SetPoint("TOP", mainFrame, "TOP", 0, -36)
     mainFrame.SubtitleText:SetText("Left-Click to Assign SFX | Right-Click to Clear/Delete")
 
-    -- CUSTOM VECTOR CRIMSON CLOSE BUTTON
+    -- Close button (top right corner 'X')
     mainFrame.CloseButton = CreateFrame("Button", nil, mainFrame, "BackdropTemplate")
     mainFrame.CloseButton:SetSize(26, 26)
     mainFrame.CloseButton:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -16)
@@ -293,7 +323,7 @@ local function BuildUIWindow()
     mainFrame.CloseButton:SetScript("OnLeave", function(self) self:SetBackdropColor(0.4, 0.1, 0.1, 0.8) self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1) end)
     mainFrame.CloseButton:SetScript("OnClick", function() mainFrame:Hide() if selectionPanel then selectionPanel:Hide() end end)
     
-    -- NATIVE MAIN WINDOW SCROLL CONTAINER ENGINE
+    -- Main Object List.
     local mainScrollFrame = CreateFrame("ScrollFrame", nil, mainFrame)
     mainScrollFrame:SetSize(325, 330)
     mainScrollFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 16, -55)
@@ -303,7 +333,7 @@ local function BuildUIWindow()
     mainScrollChild:SetPoint("TOPLEFT", mainScrollFrame, "TOPLEFT", 0, 0)
     mainScrollFrame:SetScrollChild(mainScrollChild)
     
-    -- UN-TAINTED MINIMALIST SCROLLBAR A
+    -- Custom scrollbar for UI window.
     mainFrame.scrollBar = CreateFrame("Slider", nil, mainFrame, "BackdropTemplate")
     mainFrame.scrollBar:SetPoint("TOPLEFT", mainScrollFrame, "TOPRIGHT", 8, -6)
     mainFrame.scrollBar:SetPoint("BOTTOMLEFT", mainScrollFrame, "BOTTOMRIGHT", 8, 6)
@@ -323,7 +353,8 @@ local function BuildUIWindow()
         local curr = mainFrame.scrollBar:GetValue()
         mainFrame.scrollBar:SetValue(curr - (delta * 18))
     end)
-    -- BUILD THE SELECTION SUB-PANEL OVERLAY DRAWER
+
+    -- SFX Assignment Panel.
     selectionPanel = CreateFrame("Frame", nil, mainFrame, "BackdropTemplate")
     selectionPanel:SetSize(260, 340)
     selectionPanel:SetPoint("LEFT", mainFrame, "RIGHT", -4, -15)
@@ -338,7 +369,7 @@ local function BuildUIWindow()
     selectionPanel.TitleText:SetPoint("TOPLEFT", 14, -14)
     selectionPanel.TitleText:SetWidth(200)
 
-    -- THE SELECTION PANEL WINDOW CLOSE BUTTON
+    -- Close button for the SFX selection panel.
     selectionPanel.CloseButton = CreateFrame("Button", nil, selectionPanel, "BackdropTemplate")
     selectionPanel.CloseButton:SetSize(22, 22)
     selectionPanel.CloseButton:SetPoint("TOPRIGHT", selectionPanel, "TOPRIGHT", -12, -12)
@@ -360,7 +391,7 @@ local function BuildUIWindow()
     selectionPanel.CloseButton:SetScript("OnLeave", function(self) self:SetBackdropColor(0.4, 0.1, 0.1, 0.8) self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1) end)
     selectionPanel.CloseButton:SetScript("OnClick", function() selectionPanel:Hide() end)
 
-    -- Dynamic Search Text Field Box Layer
+    -- SFX Search and Scrolling.
     selectionPanel.SearchBox = CreateFrame("EditBox", nil, selectionPanel, "SearchBoxTemplate")
     selectionPanel.SearchBox:SetSize(230, 20)
     selectionPanel.SearchBox:SetPoint("TOPLEFT", 14, -40)
@@ -386,7 +417,7 @@ local function BuildUIWindow()
     selectionPanel.scrollChild:SetSize(220, 240)
     sf:SetScrollChild(selectionPanel.scrollChild)
     
-    -- UN-TAINTED MINIMALIST SCROLLBAR B: Selection Drawer
+    -- Scrollbar for SFX Selection Panel
     selectionPanel.scrollBar = CreateFrame("Slider", nil, selectionPanel, "BackdropTemplate")
     selectionPanel.scrollBar:SetPoint("TOPLEFT", sf, "TOPRIGHT", 8, -6)
     selectionPanel.scrollBar:SetPoint("BOTTOMLEFT", sf, "BOTTOMRIGHT", 8, 6)
@@ -407,7 +438,7 @@ local function BuildUIWindow()
         selectionPanel.scrollBar:SetValue(curr - (delta * 14))
     end)
 
-    -- THE CRIMSON-THEMED "ADD NEW OBJECT" TRIGGER BUTTON
+    -- Object Capture Mode Controls
     mainFrame.AddButton = CreateFrame("Button", nil, mainFrame, "BackdropTemplate")
     mainFrame.AddButton:SetSize(160, 30)
     mainFrame.AddButton:SetPoint("BOTTOM", mainFrame, "BOTTOM", 0, 18)
@@ -427,6 +458,7 @@ local function BuildUIWindow()
     mainFrame.AddButton:SetScript("OnEnter", function(self) self:SetBackdropColor(0.7, 0.1, 0.1, 1) self:SetBackdropBorderColor(1, 0.3, 0.3, 1) end)
     mainFrame.AddButton:SetScript("OnLeave", function(self) self:SetBackdropColor(0.4, 0.1, 0.1, 0.8) self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1) end)
     
+    -- Toggle capture mode. Tooltip scanner handles registering the next right-clicked object.
     mainFrame.AddButton:SetScript("OnClick", function(self)
         DecorSFXAddon.isCapturing = not DecorSFXAddon.isCapturing
         if DecorSFXAddon.isCapturing then
@@ -445,7 +477,9 @@ local function BuildUIWindow()
     end)
 end
 
--- 5. MASTER LOADING SYSTEM INTEGRATION
+----------------------------------------------------------------------------------------------------
+-- Initialize UI and cache available sounds at login
+----------------------------------------------------------------------------------------------------
 local initLoaderFrame = CreateFrame("Frame")
 initLoaderFrame:RegisterEvent("PLAYER_LOGIN")
 initLoaderFrame:SetScript("OnEvent", function(_, event)
@@ -455,7 +489,9 @@ initLoaderFrame:SetScript("OnEvent", function(_, event)
     end
 end)
 
--- 6. MASTER TOGGLE INTERFACE ROUTINE
+----------------------------------------------------------------------------------------------------
+-- Display/hide main window
+----------------------------------------------------------------------------------------------------
 local function ToggleAddonUI()
     BuildUIWindow()
     if mainFrame:IsShown() then
@@ -469,7 +505,9 @@ local function ToggleAddonUI()
 end
 DecorSFXAddon.UI.Toggle = ToggleAddonUI
 
--- 7. THE BLIZZARD ADDON COMPARTMENT REGISTRATION
+----------------------------------------------------------------------------------------------------
+-- Register handlers for addon compartment button by the minimap
+----------------------------------------------------------------------------------------------------
 _G["DecorSFX_OnCompartmentClick"] = function()
     ToggleAddonUI()
 end
@@ -485,8 +523,9 @@ _G["DecorSFX_OnCompartmentLeave"] = function()
     GameTooltip:Hide()
 end
 
--- 8. MULTI-COMMAND INTERFACE FALLBACKS
--- Registered tokens map out handles to ensure both command text routes process identically
+----------------------------------------------------------------------------------------------------
+-- Register console commands to toggle UI on/off
+----------------------------------------------------------------------------------------------------
 SLASH_DECORSFX1 = "/dsfx"
 SLASH_DECORSFX2 = "/decorsfx"
 SlashCmdList["DECORSFX"] = function() 
