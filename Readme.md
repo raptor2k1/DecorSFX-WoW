@@ -21,7 +21,7 @@ This addon includes third-party libraries:
 - CallbackHandler-1.0 (BSD 3-Clause License)
 - LibStub (MIT License)
 - LibSharedMedia-3.0 (LGPL v2.1)  
-DecorSFX uses the **LibSharedMedia** addon framework to read your audio tracks. If you have any audio SFX files registered to LibSharedMedia through any other addons, they should show up as options in DecorSFX.
+DecorSFX uses the **LibSharedMedia** addon framework to read your audio tracks. If you have any audio SFX files registered to LibSharedMedia through any other addons, they should show up as options in DecorSFX.  
 **WARNING:** If you do not install a SharedMedia audio pack or generate your own using SharedMedia's batch script, your SFX selection list will be **empty**.
 
 * **Custom SFX - HIGHLY RECOMMENDED:** Install the standalone **SharedMedia** addon. This way you can run the addon's `MyMedia.bat` script to add any custom sound effects you want to add to your game. If you have any SFX that you want to add that aren't in .ogg format, I'd recommend using a free program like Audacity to export your desired sound clips as an .ogg format copy, so they can be used in-game. Once you have some .ogg files you'd like to add, go through the following steps.  
