@@ -126,17 +126,15 @@ WorldFrame:HookScript("OnMouseUp", function(_, button)
                         if currentTime >= cooldownExpiration then
                             local soundPath = LSM and LSM:Fetch("sound", savedSoundName)
                             
-                            -- Validate and play the SFX
+                            -- Fetch and play the SFX using LibSharedMedia
+                            local soundPath = LSM and LSM:Fetch("sound", savedSoundName)
+
                             if soundPath then
                                 PlaySoundFile(soundPath, "Master")
                             else
-                                PlaySoundFile(
-                                    "Interface\\AddOns\\SharedMedia_MyMedia\\sound\\" ..
-                                    savedSoundName .. ".ogg",
-                                    "Master"
-                                )
+                                print("[DecorSFX] Unable to locate registered sound: " .. savedSoundName)
                             end
-                            
+                       
                             -- Start a 2.5-second cooldown for the played item.
                             audioCooldowns[currentHoveredItemName] = currentTime + 2.5
                         end
